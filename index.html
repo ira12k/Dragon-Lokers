@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Драгон Парк Антей — Локери</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg: #12151a;
+    --bg-soft: #171b21;
+    --panel: #1e232b;
+    --panel-2: #242a33;
+    --line: #2e3542;
+    --line-soft: #262c36;
+    --text: #e7ebf1;
+    --muted: #8a93a3;
+    --muted-2: #5c6474;
+    --accent: #f5c518;
+    --accent-dim: #a88a1a;
+    --teal: #2dd4bf;
+    --ok: #45c774;
+    --ok-dim: rgba(69,199,116,0.14);
+    --warn: #f5b942;
+    --warn-dim: rgba(245,185,66,0.14);
+    --full: #ef5b5b;
+    --full-dim: rgba(239,91,91,0.14);
+    --radius: 10px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(245,197,24,0.06), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(45,212,191,0.05), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  .mono{ font-family: 'JetBrains Mono', monospace; }
+  .display{ font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.03em; }
+
+  /* ---------- Layout shells ---------- */
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  /* ---------- HOME ---------- */
+  #home{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding: 48px 20px;
+    text-align:center;
+  }
+  .brand-eyebrow{
+    color: var(--accent);
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    letter-spacing:0.35em;
+    text-transform:uppercase;
+    margin-bottom:14px;
+  }
+  .brand-title{
+    font-family:'Bebas Neue',sans-serif;
+    font-size: clamp(48px, 9vw, 96px);
+    line-height: 0.95;
+    letter-spacing: 0.02em;
+    margin:0;
+    background: linear-gradient(180deg, #ffffff 10%, #b9c2d0 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .brand-sub{
+    font-family:'Bebas Neue',sans-serif;
+    font-size: clamp(20px, 3.4vw, 32px);
+    color: var(--accent);
+    margin: 2px 0 40px;
+    letter-spacing: 0.08em;
+  }
+  .home-grid{
+    display:grid;
+    grid-template-columns: repeat(3, minmax(220px, 300px));
+    gap: 20px;
+    width:100%;
+    max-width: 1000px;
+  }
+  @media (max-width: 800px){
+    .home-grid{ grid-template-columns: 1fr; }
+  }
+  .section-card{
+    position:relative;
+    background: linear-gradient(180deg, var(--panel), var(--bg-soft));
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 26px 22px 22px;
+    text-align:left;
+    cursor:pointer;
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+    overflow:hidden;
+  }
+  .section-card::before{
+    content:"";
+    position:absolute; inset:0 0 auto 0; height:4px;
+    background: linear-gradient(90deg, var(--accent), var(--teal));
+    opacity:0.85;
+  }
+  .section-card:hover{
+    transform: translateY(-4px);
+    border-color: var(--accent-dim);
+    box-shadow: var(--shadow);
+  }
+  .section-card .num{
+    font-family:'JetBrains Mono',monospace;
+    color: var(--muted-2);
+    font-size: 12px;
+    letter-spacing: 0.2em;
+  }
+  .section-card h3{
+    font-family:'Bebas Neue',sans-serif;
+    font-size: 30px;
+    letter-spacing: 0.02em;
+    margin: 6px 0 14px;
+  }
+  .card-stats{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top: 4px;
+  }
+  .chip{
+    font-family:'JetBrains Mono',monospace;
+    font-size: 11px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    white-space:nowrap;
+  }
+  .chip.ok{ color: var(--ok); border-color: rgba(69,199,116,0.35); background: var(--ok-dim); }
+  .chip.warn{ color: var(--warn); border-color: rgba(245,185,66,0.35); background: var(--warn-dim); }
+  .chip.full{ color: var(--full); border-color: rgba(239,91,91,0.35); background: var(--full-dim); }
+
+  .home-footer{
+    margin-top: 40px;
+    color: var(--muted-2);
+    font-size: 12px;
+    font-family:'JetBrains Mono',monospace;
+  }
+
+  /* ---------- SECTION VIEW ---------- */
+  .topbar{
+    position: sticky; top:0; z-index: 20;
+    background: rgba(18,21,26,0.92);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 20px;
+  }
+  .topbar-inner{
+    max-width: 1280px; margin: 0 auto;
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  }
+  .btn{
+    appearance:none; border:1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    padding: 9px 14px;
+    border-radius: 8px;
+    font-family:'Inter',sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor:pointer;
+    transition: all .12s ease;
+    display:inline-flex; align-items:center; gap:8px;
+  }
+  .btn:hover{ border-color: var(--accent-dim); background: var(--panel-2); }
+  .btn.primary{ background: var(--accent); color:#20220a; border-color: var(--accent); }
+  .btn.primary:hover{ filter: brightness(1.08); }
+  .btn.ghost{ background: transparent; }
+  .btn.danger{ color: var(--full); border-color: rgba(239,91,91,0.4); }
+  .btn.small{ padding:6px 10px; font-size:12px; }
+
+  .section-title-wrap{ display:flex; flex-direction:column; }
+  .section-title{ font-family:'Bebas Neue',sans-serif; font-size: 26px; letter-spacing:0.02em; }
+  .section-count{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); }
+
+  .search-wrap{
+    flex:1; min-width:220px; max-width:380px;
+    position:relative;
+  }
+  .search-wrap input{
+    width:100%;
+    background: var(--panel);
+    border:1px solid var(--line);
+    color: var(--text);
+    padding: 9px 12px 9px 34px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family:'Inter',sans-serif;
+  }
+  .search-wrap input:focus{ outline:none; border-color: var(--accent-dim); }
+  .search-wrap::before{
+    content:"⌕";
+    position:absolute; left:11px; top:50%; transform:translateY(-50%);
+    color: var(--muted); font-size:16px; pointer-events:none;
+  }
+
+  .filters{
+    display:flex; gap:8px; flex-wrap:wrap;
+    max-width:1280px; margin: 12px auto 0; padding: 0 20px;
+  }
+  .filter-tab{
+    border:1px solid var(--line);
+    background: var(--panel);
+    color: var(--muted);
+    padding: 7px 13px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-family:'JetBrains Mono',monospace;
+    cursor:pointer;
+    display:flex; align-items:center; gap:7px;
+  }
+  .filter-tab .dot{ width:7px; height:7px; border-radius:50%; background: var(--muted-2); }
+  .filter-tab.active{ color: var(--text); border-color: var(--accent-dim); background: var(--panel-2); }
+  .filter-tab[data-f="empty"] .dot{ background: var(--ok); }
+  .filter-tab[data-f="partial"] .dot{ background: var(--warn); }
+  .filter-tab[data-f="full"] .dot{ background: var(--full); }
+
+  .grid-wrap{ max-width:1280px; margin: 18px auto 60px; padding: 0 20px; }
+  .locker-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 10px;
+  }
+  .locker-tile{
+    position:relative;
+    background: repeating-linear-gradient(180deg, var(--panel) 0px, var(--panel) 3px, var(--panel-2) 3px, var(--panel-2) 4px);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--muted-2);
+    border-radius: 8px;
+    padding: 10px 11px 9px;
+    cursor: pointer;
+    transition: transform .1s ease, border-color .12s ease;
+    min-height: 96px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .locker-tile:hover{ transform: translateY(-2px); border-color: var(--accent-dim); }
+  .locker-tile.dim{ opacity: 0.22; pointer-events:none; }
+  .locker-tile.match{ box-shadow: 0 0 0 2px var(--accent); }
+  .locker-tile.empty{ border-left-color: var(--ok); }
+  .locker-tile.partial{ border-left-color: var(--warn); }
+  .locker-tile.full{ border-left-color: var(--full); }
+
+  .tile-top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .tile-num{ font-family:'Bebas Neue',sans-serif; font-size:20px; color: var(--text); line-height:1; }
+  .tile-lock{ font-size: 13px; opacity:0.8; }
+  .tile-slot{
+    font-size: 11px;
+    line-height: 1.25;
+    color: var(--muted);
+    border-top: 1px dashed var(--line-soft);
+    padding-top: 4px;
+  }
+  .tile-slot .who{ color: var(--text); font-weight:600; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tile-slot .pos{ color: var(--muted); display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10.5px; }
+  .tile-slot.vacant{ color: var(--muted-2); font-style:italic; }
+
+  .empty-state{
+    text-align:center; padding: 60px 20px; color: var(--muted);
+    font-family:'JetBrains Mono',monospace; font-size:13px;
+  }
+
+  /* ---------- MODAL ---------- */
+  .overlay{
+    position:fixed; inset:0; background: rgba(6,8,11,0.72);
+    display:none; align-items:center; justify-content:center;
+    z-index: 100; padding: 20px;
+  }
+  .overlay.active{ display:flex; }
+  .modal{
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    width: 100%; max-width: 640px;
+    max-height: 90vh; overflow-y:auto;
+    box-shadow: var(--shadow);
+  }
+  .modal-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--line);
+  }
+  .modal-head h2{ font-family:'Bebas Neue',sans-serif; font-size:26px; margin:0; letter-spacing:0.02em; }
+  .modal-head .sub{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); margin-top:2px; }
+  .close-x{ background:none; border:none; color: var(--muted); font-size:22px; cursor:pointer; line-height:1; }
+  .close-x:hover{ color: var(--text); }
+  .modal-body{ padding: 18px 22px 22px; display:flex; flex-direction:column; gap:16px; }
+
+  .slot-card{
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .slot-card h4{
+    margin:0 0 10px;
+    font-family:'JetBrains Mono',monospace;
+    font-size: 11px;
+    text-transform:uppercase;
+    letter-spacing:0.15em;
+    color: var(--muted);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .field{ margin-bottom: 10px; }
+  .field label{ display:block; font-size:11.5px; color: var(--muted); margin-bottom:5px; }
+  .field input{
+    width:100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 9px 10px;
+    border-radius: 7px;
+    font-size: 13.5px;
+    font-family:'Inter',sans-serif;
+  }
+  .field input:focus{ outline:none; border-color: var(--accent-dim); }
+  .field .duration{ font-size:11px; color: var(--warn); margin-top:4px; font-family:'JetBrains Mono',monospace; }
+
+  .modal-actions{
+    display:flex; justify-content:space-between; gap:10px;
+    padding: 4px 22px 22px;
+  }
+
+  .toast{
+    position:fixed; bottom: 22px; left:50%; transform: translateX(-50%);
+    background: var(--panel-2); border:1px solid var(--accent-dim);
+    color: var(--text); padding: 11px 18px; border-radius: 9px;
+    font-size: 13px; z-index: 200; box-shadow: var(--shadow);
+    opacity:0; pointer-events:none; transition: opacity .2s ease;
+  }
+  .toast.show{ opacity:1; }
+
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-thumb{ background: var(--line); border-radius:6px; }
+  ::-webkit-scrollbar-track{ background: transparent; }
+
+  /* ---------- PASSWORD GATE ---------- */
+  #passwordGate{
+    position: fixed; inset:0; z-index: 500;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(245,197,24,0.07), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(45,212,191,0.06), transparent 55%),
+      var(--bg);
+    display:flex; align-items:center; justify-content:center;
+    padding: 20px;
+  }
+  #passwordGate.hidden{ display:none; }
+  .gate-card{
+    width:100%; max-width: 360px;
+    background: linear-gradient(180deg, var(--panel), var(--bg-soft));
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 30px 28px 26px;
+    text-align:center;
+    box-shadow: var(--shadow);
+  }
+  .gate-lock{ font-size: 30px; margin-bottom: 6px; }
+  .gate-card .brand-eyebrow{ margin-bottom: 6px; }
+  .gate-card h2{
+    font-family:'Bebas Neue',sans-serif;
+    font-size: 30px; margin: 0 0 4px; letter-spacing: 0.02em;
+  }
+  .gate-card p{ color: var(--muted); font-size: 12.5px; margin: 0 0 20px; }
+  .gate-card input{
+    width:100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 11px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align:center;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+    font-family:'Inter',sans-serif;
+  }
+  .gate-card input:focus{ outline:none; border-color: var(--accent-dim); }
+  .gate-card .btn{ width:100%; justify-content:center; padding: 11px; }
+  .gate-error{
+    color: var(--full); font-size: 12px; margin-top: 10px;
+    min-height: 14px; font-family:'JetBrains Mono',monospace;
+  }
+  #appRoot{ display:none; }
+</style>
+</head>
+<body>
+
+<!-- ============ PASSWORD GATE ============ -->
+<div id="passwordGate">
+  <div class="gate-card">
+    <div class="gate-lock">🔒</div>
+    <div class="brand-eyebrow">Драгон Парк Антей</div>
+    <h2>Доступ до локерів</h2>
+    <p>Введіть пароль, щоб продовжити</p>
+    <input type="password" id="gatePassword" placeholder="Пароль" autocomplete="current-password">
+    <button class="btn primary" id="gateSubmit" type="button">Увійти</button>
+    <div class="gate-error" id="gateError"></div>
+  </div>
+</div>
+
+<script>
+// Пароль для входу на сайт (клієнтський захист від випадкових відвідувачів)
+const SITE_PASSWORD = "Dragon2828Ant";
+const GATE_STORAGE_KEY = "dragon-park-gate-ok";
+
+function checkGate(){
+  const input = document.getElementById('gatePassword');
+  const val = input.value;
+  if(val === SITE_PASSWORD){
+    try{ localStorage.setItem(GATE_STORAGE_KEY, "1"); }catch(e){}
+    document.getElementById('passwordGate').classList.add('hidden');
+    document.getElementById('appRoot').style.display = 'block';
+  } else {
+    document.getElementById('gateError').textContent = 'Невірний пароль. Спробуйте ще раз.';
+    input.value = '';
+    input.focus();
+  }
+}
+
+document.getElementById('gateSubmit').addEventListener('click', checkGate);
+document.getElementById('gatePassword').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') checkGate();
+  document.getElementById('gateError').textContent = '';
+});
+
+(function initGate(){
+  let alreadyOk = false;
+  try{ alreadyOk = localStorage.getItem(GATE_STORAGE_KEY) === "1"; }catch(e){}
+  if(alreadyOk){
+    document.getElementById('passwordGate').classList.add('hidden');
+    document.getElementById('appRoot').style.display = 'block';
+  } else {
+    document.getElementById('gatePassword').focus();
+  }
+})();
+</script>
+
+<!-- ============ APP CONTENT (заблоковано доти, доки не введено пароль) ============ -->
+<div id="appRoot">
+
+<!-- ============ HOME ============ -->
+<div id="home" class="view active">
+  <div class="brand-eyebrow">Система обліку · Персонал</div>
+  <h1 class="brand-title">ДРАГОН ПАРК АНТЕЙ</h1>
+  <div class="brand-sub">ЛОКЕРИ</div>
+
+  <div class="home-grid" id="homeGrid"></div>
+
+  <div class="home-footer">84 локери · 2 місця на локер · дані зберігаються автоматично</div>
+</div>
+
+<!-- ============ SECTION ============ -->
+<div id="sectionView" class="view">
+  <div class="topbar">
+    <div class="topbar-inner">
+      <button class="btn ghost" id="backBtn">← На головну</button>
+      <div class="section-title-wrap">
+        <div class="section-title" id="secTitle">—</div>
+        <div class="section-count" id="secCount">—</div>
+      </div>
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="Пошук: локер, посада, прізвище...">
+      </div>
+      <button class="btn" id="exportBtn">⬇ Excel (усі роздягалки)</button>
+    </div>
+  </div>
+
+  <div class="filters" id="filters">
+    <div class="filter-tab active" data-f="all"><span class="dot"></span>Всі</div>
+    <div class="filter-tab" data-f="empty"><span class="dot"></span>Порожні</div>
+    <div class="filter-tab" data-f="partial"><span class="dot"></span>Частково зайняті</div>
+    <div class="filter-tab" data-f="full"><span class="dot"></span>Зайняті повністю</div>
+  </div>
+
+  <div class="grid-wrap">
+    <div class="locker-grid" id="lockerGrid"></div>
+    <div class="empty-state" id="emptyState" style="display:none;">Нічого не знайдено за вашим запитом</div>
+  </div>
+</div>
+
+<!-- ============ MODAL ============ -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2 id="modalTitle">Локер №1</h2>
+        <div class="sub" id="modalSub">—</div>
+      </div>
+      <button class="close-x" id="closeModal">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="btn ghost small" id="clearAllBtn">Очистити локер</button>
+      <button class="btn primary" id="saveBtn">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<datalist id="posadaList">
+  <option value="Оператор атракціону">
+  <option value="Кухар">
+  <option value="Кухар-кондитер">
+  <option value="Адміністратор">
+  <option value="Касир">
+  <option value="Прибиральник(-ця)">
+  <option value="Охоронець">
+  <option value="Технік">
+  <option value="Аніматор">
+  <option value="Офіціант(-ка)">
+  <option value="Бармен(-ка)">
+  <option value="Менеджер зміни">
+</datalist>
+
+<script>
+/* =========================================================
+   FIREBASE НАЛАШТУВАННЯ
+   1. Зайдіть на https://console.firebase.google.com
+   2. Створіть проєкт (безкоштовно) -> Build -> Firestore Database
+      -> Create database -> Start in TEST MODE (потім можна
+      обмежити правила доступу).
+   3. Project settings (шестерня) -> General -> "Your apps"
+      -> Web app (</>) -> зареєструйте застосунок
+      -> скопіюйте firebaseConfig і вставте його СЮДИ замість
+      значень нижче.
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "ВСТАВТЕ_СЮДИ",
+  authDomain: "ВАШ_ПРОЄКТ.firebaseapp.com",
+  projectId: "ВАШ_ПРОЄКТ",
+  storageBucket: "ВАШ_ПРОЄКТ.appspot.com",
+  messagingSenderId: "ВСТАВТЕ_СЮДИ",
+  appId: "ВСТАВТЕ_СЮДИ"
+};
+
+const FIREBASE_READY = firebaseConfig.apiKey !== "ВСТАВТЕ_СЮДИ";
+let db = null;
+let docRef = null;
+if(FIREBASE_READY){
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  docRef = db.collection('dragonpark').doc('lockers-data');
+}
+
+const LOCAL_FALLBACK_KEY = 'dragon-park-lockers-data-v1'; // used only if Firebase isn't configured yet
+
+const LOCKERS_PER_SECTION = 84;
+const SECTIONS = [
+  { id: 'floor2',    label: 'Роздягалка 2 поверх' },
+  { id: 'kitchen',   label: 'Роздягалка Кухні' },
+  { id: 'operators', label: 'Роздягалка Операторів' },
+];
+
+let DATA = null;
+let currentSection = null;
+let currentFilter = 'all';
+let currentLockerNum = null;
+let suppressNextSnapshot = false;
+
+// ---------- Data helpers ----------
+function makeDefaultData(){
+  const d = {};
+  SECTIONS.forEach(s => {
+    d[s.id] = [];
+    for(let i=1;i<=LOCKERS_PER_SECTION;i++){
+      d[s.id].push({
+        num: i,
+        slots: [
+          { posada:'', name:'', date:'' },
+          { posada:'', name:'', date:'' }
+        ]
+      });
+    }
+  });
+  return d;
+}
+
+function healData(parsed){
+  SECTIONS.forEach(s=>{
+    if(!parsed[s.id]) parsed[s.id] = makeDefaultData()[s.id];
+  });
+  return parsed;
+}
+
+async function loadData(){
+  if(!FIREBASE_READY){
+    showToast('⚠ Firebase не налаштовано — дані зберігаються лише локально в цьому браузері');
+    try{
+      const raw = localStorage.getItem(LOCAL_FALLBACK_KEY);
+      DATA = raw ? healData(JSON.parse(raw)) : makeDefaultData();
+    }catch(e){
+      DATA = makeDefaultData();
+    }
+    return;
+  }
+
+  try{
+    const snap = await docRef.get();
+    if(snap.exists && snap.data().json){
+      DATA = healData(JSON.parse(snap.data().json));
+    } else {
+      DATA = makeDefaultData();
+      await saveData();
+    }
+  }catch(e){
+    console.error('Firestore load failed', e);
+    showToast('⚠ Не вдалося завантажити дані з бази');
+    DATA = makeDefaultData();
+  }
+
+  // Live sync: якщо хтось інший вносить зміни, оновлюємо екран автоматично
+  docRef.onSnapshot((snap) => {
+    if(suppressNextSnapshot){ suppressNextSnapshot = false; return; }
+    if(!snap.exists) return;
+    const overlayOpen = document.getElementById('overlay').classList.contains('active');
+    if(overlayOpen) return; // не перебиваємо людину, поки вона редагує локер
+    try{
+      DATA = healData(JSON.parse(snap.data().json));
+      if(document.getElementById('home').classList.contains('active')){
+        renderHome();
+      } else if(currentSection){
+        renderSection();
+      }
+    }catch(e){ console.error('Snapshot parse failed', e); }
+  });
+}
+
+async function saveData(){
+  if(!FIREBASE_READY){
+    try{
+      localStorage.setItem(LOCAL_FALLBACK_KEY, JSON.stringify(DATA));
+    }catch(e){
+      console.error('Local save failed', e);
+      showToast('⚠ Помилка збереження даних');
+    }
+    return;
+  }
+  try{
+    suppressNextSnapshot = true;
+    await docRef.set({ json: JSON.stringify(DATA), updatedAt: Date.now() });
+  }catch(e){
+    console.error('Firestore save failed', e);
+    showToast('⚠ Помилка збереження даних у базу');
+  }
+}
+
+function lockerStatus(locker){
+  const filled = locker.slots.filter(s => s.name && s.name.trim() !== '').length;
+  if(filled === 0) return 'empty';
+  if(filled === 2) return 'full';
+  return 'partial';
+}
+
+function monthsSince(dateStr){
+  if(!dateStr) return null;
+  const then = new Date(dateStr);
+  if(isNaN(then)) return null;
+  const now = new Date();
+  let months = (now.getFullYear()-then.getFullYear())*12 + (now.getMonth()-then.getMonth());
+  if(now.getDate() < then.getDate()) months -= 1;
+  return Math.max(0, months);
+}
+
+function sectionStats(sectionId){
+  const lockers = DATA[sectionId];
+  let empty=0, partial=0, full=0;
+  lockers.forEach(l=>{
+    const st = lockerStatus(l);
+    if(st==='empty') empty++; else if(st==='full') full++; else partial++;
+  });
+  return {empty, partial, full, total: lockers.length};
+}
+
+// ---------- Rendering: Home ----------
+function renderHome(){
+  const grid = document.getElementById('homeGrid');
+  grid.innerHTML = '';
+  SECTIONS.forEach((s, idx) => {
+    const stats = sectionStats(s.id);
+    const card = document.createElement('div');
+    card.className = 'section-card';
+    card.innerHTML = `
+      <div class="num">0${idx+1} / ЛОКЕРНА</div>
+      <h3>${s.label}</h3>
+      <div class="card-stats">
+        <span class="chip ok">Порожні ${stats.empty}</span>
+        <span class="chip warn">Частково ${stats.partial}</span>
+        <span class="chip full">Повні ${stats.full}</span>
+      </div>
+    `;
+    card.addEventListener('click', () => openSection(s.id));
+    grid.appendChild(card);
+  });
+}
+
+// ---------- Rendering: Section ----------
+function openSection(sectionId){
+  currentSection = sectionId;
+  currentFilter = 'all';
+  document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('.filter-tab[data-f="all"]').classList.add('active');
+  document.getElementById('searchInput').value = '';
+  showView('sectionView');
+  renderSection();
+}
+
+function showView(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  forceScrollTop();
+}
+
+function forceScrollTop(){
+  window.scrollTo(0,0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  requestAnimationFrame(() => {
+    window.scrollTo(0,0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  });
+}
+
+function renderSection(){
+  const meta = SECTIONS.find(s=>s.id===currentSection);
+  document.getElementById('secTitle').textContent = meta.label;
+  const stats = sectionStats(currentSection);
+  document.getElementById('secCount').textContent =
+    `${stats.total} локерів · порожні ${stats.empty} · частково ${stats.partial} · повні ${stats.full}`;
+  renderGrid();
+}
+
+function renderGrid(){
+  const grid = document.getElementById('lockerGrid');
+  const emptyState = document.getElementById('emptyState');
+  grid.innerHTML = '';
+  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+  const lockers = DATA[currentSection];
+  let visibleCount = 0;
+
+  lockers.forEach(locker => {
+    const status = lockerStatus(locker);
+    let matchesFilter = currentFilter === 'all' || currentFilter === status;
+
+    let matchesSearch = true;
+    let isSearchHit = false;
+    if(query){
+      const numMatch = String(locker.num).includes(query);
+      const slotMatch = locker.slots.some(s =>
+        (s.posada && s.posada.toLowerCase().includes(query)) ||
+        (s.name && s.name.toLowerCase().includes(query))
+      );
+      matchesSearch = numMatch || slotMatch;
+      isSearchHit = matchesSearch;
+    }
+
+    const tile = document.createElement('div');
+    tile.className = `locker-tile ${status}`;
+    if(!matchesFilter || !matchesSearch){
+      tile.classList.add('dim');
+    } else {
+      visibleCount++;
+    }
+    if(query && isSearchHit) tile.classList.add('match');
+
+    const lockIcon = status === 'full' ? '🔒' : status === 'empty' ? '🔓' : '🔐';
+
+    const slotsHtml = locker.slots.map((s, i) => {
+      if(s.name && s.name.trim()!==''){
+        const m = monthsSince(s.date);
+        const durTxt = m===null ? '' : (m<1 ? 'менше місяця' : `${m} міс.`);
+        return `<div class="tile-slot">
+          <span class="who">${escapeHtml(s.name)}</span>
+          <span class="pos">${escapeHtml(s.posada || '—')}${durTxt ? ' · '+durTxt : ''}</span>
+        </div>`;
+      }
+      return `<div class="tile-slot vacant">Місце ${i+1}: вільно</div>`;
+    }).join('');
+
+    tile.innerHTML = `
+      <div class="tile-top">
+        <div class="tile-num">№${locker.num}</div>
+        <div class="tile-lock">${lockIcon}</div>
+      </div>
+      ${slotsHtml}
+    `;
+    tile.addEventListener('click', () => openModal(locker.num));
+    grid.appendChild(tile);
+  });
+
+  emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ---------- Modal ----------
+function openModal(num){
+  currentLockerNum = num;
+  const locker = DATA[currentSection].find(l => l.num === num);
+  const meta = SECTIONS.find(s=>s.id===currentSection);
+
+  document.getElementById('modalTitle').textContent = `Локер №${num}`;
+  document.getElementById('modalSub').textContent = meta.label;
+
+  const body = document.getElementById('modalBody');
+  body.innerHTML = '';
+
+  locker.slots.forEach((slot, i) => {
+    const m = monthsSince(slot.date);
+    const durTxt = (slot.name && m!==null) ? (m<1 ? 'Заселено менше місяця тому' : `Заселено ${m} міс. тому`) : '';
+    const card = document.createElement('div');
+    card.className = 'slot-card';
+    card.innerHTML = `
+      <h4>Місце ${i+1}
+        <button class="btn ghost small" data-clear-slot="${i}" type="button">Очистити</button>
+      </h4>
+      <div class="field">
+        <label>Посада</label>
+        <input type="text" list="posadaList" data-slot="${i}" data-field="posada" value="${escapeHtml(slot.posada||'')}" placeholder="Напр. Оператор атракціону">
+      </div>
+      <div class="field">
+        <label>Прізвище Ім'я</label>
+        <input type="text" data-slot="${i}" data-field="name" value="${escapeHtml(slot.name||'')}" placeholder="Прізвище Ім'я">
+      </div>
+      <div class="field">
+        <label>Дата заселення</label>
+        <input type="date" data-slot="${i}" data-field="date" value="${slot.date||''}">
+        <div class="duration">${durTxt}</div>
+      </div>
+    `;
+    body.appendChild(card);
+  });
+
+  body.querySelectorAll('[data-clear-slot]').forEach(btn=>{
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.getAttribute('data-clear-slot'));
+      const inputs = body.querySelectorAll(`[data-slot="${idx}"]`);
+      inputs.forEach(inp => inp.value = '');
+    });
+  });
+
+  document.getElementById('overlay').classList.add('active');
+}
+
+function closeModal(){
+  document.getElementById('overlay').classList.remove('active');
+  currentLockerNum = null;
+}
+
+async function saveModal(){
+  const locker = DATA[currentSection].find(l => l.num === currentLockerNum);
+  const body = document.getElementById('modalBody');
+  [0,1].forEach(i=>{
+    const posada = body.querySelector(`[data-slot="${i}"][data-field="posada"]`).value.trim();
+    const name = body.querySelector(`[data-slot="${i}"][data-field="name"]`).value.trim();
+    const date = body.querySelector(`[data-slot="${i}"][data-field="date"]`).value;
+    locker.slots[i] = { posada, name, date: name ? date : '' };
+  });
+  await saveData();
+  closeModal();
+  renderSection();
+  showToast('✓ Локер №' + currentLockerNumBackup + ' збережено');
+}
+
+let currentLockerNumBackup = null;
+
+async function clearLocker(){
+  if(!confirm(`Очистити обидва місця в локері №${currentLockerNum}?`)) return;
+  const locker = DATA[currentSection].find(l => l.num === currentLockerNum);
+  locker.slots = [ {posada:'',name:'',date:''}, {posada:'',name:'',date:''} ];
+  await saveData();
+  closeModal();
+  renderSection();
+  showToast('Локер очищено');
+}
+
+// ---------- Export to Excel ----------
+function exportExcel(){
+  const wb = XLSX.utils.book_new();
+  SECTIONS.forEach(s => {
+    const rows = [['Локер', 'Місце', 'Посада', "Прізвище Ім'я", 'Дата заселення', 'Місяців зайнято', 'Статус локера']];
+    DATA[s.id].forEach(locker => {
+      const status = lockerStatus(locker);
+      const statusLabel = status==='empty' ? 'Порожній' : status==='full' ? 'Зайнятий повністю' : 'Частково зайнятий';
+      locker.slots.forEach((slot, i) => {
+        const m = monthsSince(slot.date);
+        rows.push([
+          locker.num,
+          i+1,
+          slot.posada || '',
+          slot.name || '',
+          slot.date || '',
+          slot.name ? (m===null ? '' : m) : '',
+          statusLabel
+        ]);
+      });
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:8},{wch:7},{wch:24},{wch:26},{wch:16},{wch:16},{wch:20}];
+    XLSX.utils.book_append_sheet(wb, ws, s.label.slice(0,31));
+  });
+  const stamp = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `Дракон_Парк_Антей_Локери_${stamp}.xlsx`);
+  showToast('⬇ Файл Excel сформовано');
+}
+
+// ---------- Toast ----------
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 2200);
+}
+
+// ---------- Events ----------
+document.getElementById('backBtn').addEventListener('click', () => {
+  showView('home');
+  renderHome();
+});
+document.getElementById('closeModal').addEventListener('click', closeModal);
+document.getElementById('overlay').addEventListener('click', (e) => {
+  if(e.target.id === 'overlay') closeModal();
+});
+document.getElementById('saveBtn').addEventListener('click', () => {
+  currentLockerNumBackup = currentLockerNum;
+  saveModal();
+});
+document.getElementById('clearAllBtn').addEventListener('click', clearLocker);
+document.getElementById('exportBtn').addEventListener('click', exportExcel);
+document.getElementById('searchInput').addEventListener('input', renderGrid);
+document.querySelectorAll('.filter-tab').forEach(tab=>{
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    currentFilter = tab.getAttribute('data-f');
+    renderGrid();
+  });
+});
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape') closeModal();
+});
+
+// ---------- Init ----------
+(async function init(){
+  await loadData();
+  renderHome();
+})();
+</script>
+</div><!-- /#appRoot -->
+</body>
+</html>
