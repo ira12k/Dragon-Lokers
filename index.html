@@ -418,7 +418,7 @@
 
 <script>
 // Пароль для входу на сайт (клієнтський захист від випадкових відвідувачів)
-const SITE_PASSWORD = "Dragon2828Ant";
+const SITE_PASSWORD = "dragon2828";
 const GATE_STORAGE_KEY = "dragon-park-gate-ok";
 
 function checkGate(){
@@ -435,13 +435,13 @@ function checkGate(){
   }
 }
 
-document.getElementById('gateSubmit').addEventListener('click', checkGate);
-document.getElementById('gatePassword').addEventListener('keydown', (e) => {
-  if(e.key === 'Enter') checkGate();
-  document.getElementById('gateError').textContent = '';
-});
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('gateSubmit').addEventListener('click', checkGate);
+  document.getElementById('gatePassword').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') checkGate();
+    document.getElementById('gateError').textContent = '';
+  });
 
-(function initGate(){
   let alreadyOk = false;
   try{ alreadyOk = localStorage.getItem(GATE_STORAGE_KEY) === "1"; }catch(e){}
   if(alreadyOk){
@@ -450,7 +450,7 @@ document.getElementById('gatePassword').addEventListener('keydown', (e) => {
   } else {
     document.getElementById('gatePassword').focus();
   }
-})();
+});
 </script>
 
 <!-- ============ APP CONTENT (заблоковано доти, доки не введено пароль) ============ -->
